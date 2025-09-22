@@ -1,3 +1,10 @@
+import streamlit as st
+import PyPDF2
+import re
+from transformers import pipeline
+
+import streamlit as st
+
 st.markdown("""
     <style>
     /* Fonts */
@@ -88,13 +95,6 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-
-import streamlit as st
-import PyPDF2
-import re
-from transformers import pipeline
-
-import streamlit as st
 
 # --- TITLE + MEME TAGLINE ---
 st.title("🧠 BrainBox")
