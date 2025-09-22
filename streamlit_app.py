@@ -1,63 +1,73 @@
 import streamlit as st
 import PyPDF2
-import random
+import re
+from transformers import pipeline
 
-# ------------------ APP SETUP ------------------ #
-st.set_page_config(page_title="BrainBox", page_icon="🧠", layout="wide")
+# --- Load Hugging Face Pipelines ---
+@st.cache_resource
+def load_pipelines():
+    summarizer = pipeline("summarization", model="facebook/bart-large-cnn")
+    qg = pipeline("text2text-generation", model="iarfmoose/t5-base-question-generator")
+    return summarizer, qg
 
-st.title("🧠 BrainBox: Your AI-Powered Study Buddy")
-st.markdown("Upload PDFs, get summaries, and auto-generate questions. No stress, just flex.")
+summarizer, qg = load_pipelines()
 
-# ------------------ PDF UPLOAD ------------------ #
-uploaded_file = st.file_uploader("📂 Upload your study material (PDF)", type="pdf")
-
-text = ""
-
-if uploaded_file is not None:
-    pdf_reader = PyPDF2.PdfReader(uploaded_file)
+# --- Helper Functions ---
+def extract_text_from_pdf(pdf_file):
+    pdf_reader = PyPDF2.PdfReader(pdf_file)
+    text = ""
     for page in pdf_reader.pages:
-        text += page.extract_text() or ""
+        page_text = page.extract_text()
+        if page_text:
+            text += page_text + "\n"
+    return text
 
-    st.success("✅ PDF uploaded and processed successfully!")
-    st.subheader("📑 Extracted Text Preview")
-    st.text_area("Here’s a sneak peek of your PDF:", text[:1000] + "...", height=200)
+def chunk_text(text, chunk_size=800):
+    words = text.split()
+    for i in range(0, len(words), chunk_size):
+        yield " ".join(words[i:i+chunk_size])
 
-# ------------------ SUMMARY FUNCTION ------------------ #
-def summarize_text(content, max_sentences=5):
-    sentences = content.split(".")
-    if len(sentences) <= max_sentences:
-        return content
-    return ". ".join(sentences[:max_sentences]) + "."
+def summarize_text(text):
+    try:
+        return summarizer(text, max_length=120, min_length=30, do_sample=False)[0]['summary_text']
+    except:
+        return "⚠️ Could not summarize this chunk."
 
-# ------------------ QUESTION GENERATOR ------------------ #
-def generate_questions(content, num_questions=5):
-    sentences = [s.strip() for s in content.split(".") if len(s.strip()) > 10]
-    random.shuffle(sentences)
-    questions = []
-    for i, sent in enumerate(sentences[:num_questions]):
-        q = sent.replace(" is ", " ______ is ").replace(" are ", " ______ are ")
-        q = q.replace(" was ", " ______ was ").replace(" were ", " ______ were ")
-        if q == sent:  
-            q = "What is the significance of: " + sent[:50] + "..."
-        questions.append(f"Q{i+1}: {q}?")
-    return questions
+def generate_questions(text, num_qs=3):
+    try:
+        raw_qs = qg("generate questions: " + text, max_length=64, num_return_sequences=num_qs)
+        return [q['generated_text'] for q in raw_qs]
+    except:
+        return ["⚠️ Could not generate questions."]
 
-# ------------------ MAIN FEATURES ------------------ #
-if text:
-    st.subheader("📝 Notes / Summary")
-    summary = summarize_text(text)
-    st.write(summary)
+# --- Streamlit UI ---
+st.title("🤖 BrainBox Turbo AI — Handles 1000+ Page PDFs 🧠")
 
-    st.subheader("❓ Practice Questions")
-    qs = generate_questions(text, num_questions=5)
-    for q in qs:
-        st.write(q)
+uploaded_file = st.file_uploader("Upload a PDF", type="pdf")
 
-    st.download_button("⬇️ Download Notes", summary, file_name="BrainBox_Notes.txt")
+if uploaded_file:
+    st.success("✅ PDF uploaded successfully!")
 
-else:
-    st.info("👆 Upload a PDF to get started!")
+    # Extract text
+    text = extract_text_from_pdf(uploaded_file)
+    st.write(f"📖 Extracted {len(text.split())} words.")
 
-# ------------------ FOOTER ------------------ #
-st.markdown("---")
-st.caption("Built with ❤️ by Ojas (and a suspiciously helpful AI)")
+    # Process chunks
+    st.header("🔎 Chunk Summaries & Questions")
+    final_summary = []
+    for i, chunk in enumerate(chunk_text(text, chunk_size=800)):
+        st.subheader(f"📌 Chunk {i+1}")
+        
+        summary = summarize_text(chunk)
+        questions = generate_questions(chunk)
+
+        st.write("**AI Summary:**", summary)
+        st.write("**AI Questions:**")
+        for q in questions:
+            st.write("-", q)
+
+        final_summary.append(summary)
+
+    # Final mega-summary
+    st.header("✨ Final Combined AI Summary")
+    st.write(" ".join(final_summary[:8]))
