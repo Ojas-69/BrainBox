@@ -1,7 +1,115 @@
+st.markdown("""
+    <style>
+    /* Fonts */
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Poppins:wght@300;400;600&display=swap');
+
+    html, body, [class*="css"] {
+        font-family: 'Poppins', sans-serif;
+    }
+
+    /* Sci-fi animated background */
+    .stApp {
+        background: radial-gradient(circle at 20% 20%, #0f2027, #203a43, #2c5364);
+        background-size: 400% 400%;
+        animation: gradientShift 15s ease infinite;
+        color: white;
+    }
+
+    @keyframes gradientShift {
+        0% {background-position: 0% 50%;}
+        50% {background-position: 100% 50%;}
+        100% {background-position: 0% 50%;}
+    }
+
+    /* Title styling (sci-fi font) */
+    h1, h2, h3 {
+        font-family: 'Orbitron', sans-serif;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        color: #00ffea;
+        text-shadow: 0 0 10px #00ffeab3, 0 0 20px #00ffeab3;
+    }
+
+    /* Sidebar = dark neon */
+    .css-1d391kg, .css-1l02zno {
+        background: #111 !important;
+        color: #0ff !important;
+    }
+    .css-1d391kg a, .css-1l02zno a {
+        color: #ff00ff !important;
+        font-weight: bold;
+    }
+
+    /* Buttons = meme neon */
+    div.stButton > button {
+        background: linear-gradient(90deg, #ff00cc, #3333ff);
+        color: white;
+        border-radius: 12px;
+        padding: 0.7em 1.5em;
+        font-weight: 700;
+        font-family: 'Orbitron', sans-serif;
+        border: none;
+        box-shadow: 0 0 20px rgba(255, 0, 204, 0.6);
+        transition: 0.3s ease-in-out;
+    }
+    div.stButton > button:hover {
+        transform: scale(1.1) rotate(-1deg);
+        box-shadow: 0 0 30px rgba(0, 255, 234, 0.9);
+    }
+
+    /* Download button glow */
+    .stDownloadButton > button {
+        background: #0ff;
+        color: #111;
+        font-family: 'Orbitron', sans-serif;
+        font-weight: bold;
+        border-radius: 10px;
+        border: none;
+        padding: 0.7em 1.5em;
+        box-shadow: 0 0 15px #0ff;
+        transition: 0.3s ease-in-out;
+    }
+    .stDownloadButton > button:hover {
+        background: #ff00cc;
+        color: white;
+        box-shadow: 0 0 30px #ff00cc;
+    }
+
+    /* Expander as holo-panels */
+    .streamlit-expanderHeader {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(0, 255, 234, 0.4);
+        border-radius: 15px;
+        padding: 10px;
+        color: #0ff;
+        font-weight: bold;
+        text-shadow: 0 0 5px #0ff;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+
 import streamlit as st
 import PyPDF2
 import re
 from transformers import pipeline
+
+import streamlit as st
+
+# --- TITLE + MEME TAGLINE ---
+st.title("🧠 BrainBox")
+st.markdown(
+    "<h3 style='text-align: center; color: #ff00cc; font-family: Orbitron, sans-serif; text-shadow: 0 0 10px #ff00cc;'>⚡ Upload your PDF, awaken the braincells ⚡</h3>",
+    unsafe_allow_html=True
+)
+
+# --- PDF UPLOAD SECTION ---
+st.markdown(
+    "<h4 style='color: #00ffea; font-family: Orbitron, sans-serif; text-shadow: 0 0 10px #00ffea;'>🚀 Beam up your PDF</h4>",
+    unsafe_allow_html=True
+)
+uploaded_file = st.file_uploader("", type=["pdf"])
+
 
 # --- Load Hugging Face Pipelines ---
 @st.cache_resource
