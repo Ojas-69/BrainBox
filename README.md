@@ -1,19 +1,22 @@
-# 🎈 Blank app template
+# 🧠 BrainBox: Your AI-Powered Study Buddy
 
-A simple Streamlit app template for you to modify!
+BrainBox is a smart study assistant that helps students revise faster.  
+Upload your PDF notes, and BrainBox will automatically:
 
-[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://blank-app-template.streamlit.app/)
+- 📄 Extract text  
+- 📝 Summarize key points  
+- ❓ Generate practice questions  
+- ⬇️ Let you download clean notes  
 
-### How to run it on your own machine
+Perfect for late-night cramming or flexing in front of professors 😎  
 
-1. Install the requirements
+---
 
-   ```
-   $ pip install -r requirements.txt
-   ```
+## 📂 Features
+- Upload PDFs seamlessly  
+- Instant summaries for quick revision  
+- Auto-generated questions to test yourself  
+- Downloadable notes in `.txt` format  
+- Clean, simple Streamlit interface  
 
-2. Run the app
-
-   ```
-   $ streamlit run streamlit_app.py
-   ```
+---
