@@ -2,24 +2,23 @@ import streamlit as st
 import pdfplumber
 import os
 
-# ---------------- CSS (lighter theme, sci-fi + meme-ish) ----------------
 st.markdown("""
     <style>
     /* Fonts */
     @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500&family=Chakra+Petch&display=swap');
 
     body {
-        background-color: #f5f7fa; /* soft daylight grey */
+        background-color: #edf2f7; /* softer light grey-blue */
         color: #1c1c1c;
     }
     .stApp {
-        background: linear-gradient(120deg, #f5f7fa, #e6ecf5);
+        background: linear-gradient(135deg, #edf2f7, #dbeafe, #fef9c3);
         font-family: 'Chakra Petch', sans-serif;
     }
     h1, h2, h3 {
         font-family: 'Orbitron', sans-serif;
         color: #1e293b; /* dark slate */
-        text-shadow: 1px 1px 0px #e0e7ff;
+        text-shadow: 1px 1px 2px #cbd5e1;
     }
     .upload-msg {
         text-align: center;
@@ -29,6 +28,7 @@ st.markdown("""
     }
     </style>
 """, unsafe_allow_html=True)
+
 
 # ---------------- Title ----------------
 st.markdown("<h1 style='text-align:center;'>🧠 BrainBox</h1>", unsafe_allow_html=True)
