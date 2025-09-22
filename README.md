@@ -1,22 +1,15 @@
-# 🧠 BrainBox: Your AI-Powered Study Buddy
+# 🧠 BrainBox
 
-BrainBox is a smart study assistant that helps students revise faster.  
-Upload your PDF notes, and BrainBox will automatically:
-
-- 📄 Extract text  
-- 📝 Summarize key points  
-- ❓ Generate practice questions  
-- ⬇️ Let you download clean notes  
-
-Perfect for late-night cramming or flexing in front of professors 😎  
+**BrainBox** is your AI-powered sidekick that eats big scary PDFs and spits out snack-sized notes.  
+Perfect for when your prof uploads a *1000-page PDF* at 2 AM and you gotta survive the exam at 9 AM. 🚀
 
 ---
 
-## 📂 Features
-- Upload PDFs seamlessly  
-- Instant summaries for quick revision  
-- Auto-generated questions to test yourself  
-- Downloadable notes in `.txt` format  
-- Clean, simple Streamlit interface  
+## 🌟 Features
+- Upload **any PDF** (yes, even 1000 pages, we gotchu).
+- Extracts text and converts it into quick notes.
+- One-click **download** of your notes.
+- Clean **sci-fi inspired UI** (Orbitron + Chakra fonts).
+- Runs on **Streamlit** → free hosting on [Streamlit Community Cloud](https://streamlit.io/cloud).
 
 ---
