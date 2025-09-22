@@ -1,181 +1,65 @@
 import streamlit as st
-import PyPDF2
-import re
-from transformers import pipeline
+import pdfplumber
+import os
 
-import streamlit as st
-
+# ---------------- CSS (lighter theme, sci-fi + meme-ish) ----------------
 st.markdown("""
     <style>
     /* Fonts */
-    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Poppins:wght@300;400;600&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500&family=Chakra+Petch&display=swap');
 
-    html, body, [class*="css"] {
-        font-family: 'Poppins', sans-serif;
+    body {
+        background-color: #f5f7fa; /* soft daylight grey */
+        color: #1c1c1c;
     }
-
-    /* Sci-fi animated background */
     .stApp {
-        background: radial-gradient(circle at 20% 20%, #0f2027, #203a43, #2c5364);
-        background-size: 400% 400%;
-        animation: gradientShift 15s ease infinite;
-        color: white;
+        background: linear-gradient(120deg, #f5f7fa, #e6ecf5);
+        font-family: 'Chakra Petch', sans-serif;
     }
-
-    @keyframes gradientShift {
-        0% {background-position: 0% 50%;}
-        50% {background-position: 100% 50%;}
-        100% {background-position: 0% 50%;}
-    }
-
-    /* Title styling (sci-fi font) */
     h1, h2, h3 {
         font-family: 'Orbitron', sans-serif;
-        text-transform: uppercase;
-        letter-spacing: 2px;
-        color: #00ffea;
-        text-shadow: 0 0 10px #00ffeab3, 0 0 20px #00ffeab3;
+        color: #1e293b; /* dark slate */
+        text-shadow: 1px 1px 0px #e0e7ff;
     }
-
-    /* Sidebar = dark neon */
-    .css-1d391kg, .css-1l02zno {
-        background: #111 !important;
-        color: #0ff !important;
-    }
-    .css-1d391kg a, .css-1l02zno a {
-        color: #ff00ff !important;
-        font-weight: bold;
-    }
-
-    /* Buttons = meme neon */
-    div.stButton > button {
-        background: linear-gradient(90deg, #ff00cc, #3333ff);
-        color: white;
-        border-radius: 12px;
-        padding: 0.7em 1.5em;
-        font-weight: 700;
-        font-family: 'Orbitron', sans-serif;
-        border: none;
-        box-shadow: 0 0 20px rgba(255, 0, 204, 0.6);
-        transition: 0.3s ease-in-out;
-    }
-    div.stButton > button:hover {
-        transform: scale(1.1) rotate(-1deg);
-        box-shadow: 0 0 30px rgba(0, 255, 234, 0.9);
-    }
-
-    /* Download button glow */
-    .stDownloadButton > button {
-        background: #0ff;
-        color: #111;
-        font-family: 'Orbitron', sans-serif;
-        font-weight: bold;
-        border-radius: 10px;
-        border: none;
-        padding: 0.7em 1.5em;
-        box-shadow: 0 0 15px #0ff;
-        transition: 0.3s ease-in-out;
-    }
-    .stDownloadButton > button:hover {
-        background: #ff00cc;
-        color: white;
-        box-shadow: 0 0 30px #ff00cc;
-    }
-
-    /* Expander as holo-panels */
-    .streamlit-expanderHeader {
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid rgba(0, 255, 234, 0.4);
-        border-radius: 15px;
-        padding: 10px;
-        color: #0ff;
-        font-weight: bold;
-        text-shadow: 0 0 5px #0ff;
+    .upload-msg {
+        text-align: center;
+        font-size: 18px;
+        color: #334155;
+        margin-bottom: 12px;
     }
     </style>
 """, unsafe_allow_html=True)
 
+# ---------------- Title ----------------
+st.markdown("<h1 style='text-align:center;'>🧠 BrainBox</h1>", unsafe_allow_html=True)
+st.markdown("<p style='text-align:center; font-size:20px;'>Turning 1000-page pain into snack-sized notes 🚀</p>", unsafe_allow_html=True)
+st.markdown("---")
 
-# --- TITLE + MEME TAGLINE ---
-st.title("🧠 BrainBox")
-st.markdown(
-    "<h3 style='text-align: center; color: #ff00cc; font-family: Orbitron, sans-serif; text-shadow: 0 0 10px #ff00cc;'>⚡ Upload your PDF, awaken the braincells ⚡</h3>",
-    unsafe_allow_html=True
-)
+# ---------------- File Upload ----------------
+st.markdown("<div class='upload-msg'>📂 Step 1: Drop your PDF here 👇</div>", unsafe_allow_html=True)
+uploaded_file = st.file_uploader("Choose your PDF", type=["pdf"], label_visibility="visible")
 
-# --- PDF UPLOAD SECTION ---
-st.markdown(
-    "<h4 style='color: #00ffea; font-family: Orbitron, sans-serif; text-shadow: 0 0 10px #00ffea;'>🚀 Beam up your PDF</h4>",
-    unsafe_allow_html=True
-)
-uploaded_file = st.file_uploader("", type=["pdf"])
-
-
-# --- Load Hugging Face Pipelines ---
-@st.cache_resource
-def load_pipelines():
-    summarizer = pipeline("summarization", model="facebook/bart-large-cnn")
-    qg = pipeline("text2text-generation", model="iarfmoose/t5-base-question-generator")
-    return summarizer, qg
-
-summarizer, qg = load_pipelines()
-
-# --- Helper Functions ---
-def extract_text_from_pdf(pdf_file):
-    pdf_reader = PyPDF2.PdfReader(pdf_file)
-    text = ""
-    for page in pdf_reader.pages:
-        page_text = page.extract_text()
-        if page_text:
-            text += page_text + "\n"
-    return text
-
-def chunk_text(text, chunk_size=800):
-    words = text.split()
-    for i in range(0, len(words), chunk_size):
-        yield " ".join(words[i:i+chunk_size])
-
-def summarize_text(text):
-    try:
-        return summarizer(text, max_length=120, min_length=30, do_sample=False)[0]['summary_text']
-    except:
-        return "⚠️ Could not summarize this chunk."
-
-def generate_questions(text, num_qs=3):
-    try:
-        raw_qs = qg("generate questions: " + text, max_length=64, num_return_sequences=num_qs)
-        return [q['generated_text'] for q in raw_qs]
-    except:
-        return ["⚠️ Could not generate questions."]
-
-# --- Streamlit UI ---
-st.title("🤖 BrainBox Turbo AI — Handles 1000+ Page PDFs 🧠")
-
-uploaded_file = st.file_uploader("Upload a PDF", type="pdf")
-
-if uploaded_file:
-    st.success("✅ PDF uploaded successfully!")
-
-    # Extract text
-    text = extract_text_from_pdf(uploaded_file)
-    st.write(f"📖 Extracted {len(text.split())} words.")
-
-    # Process chunks
-    st.header("🔎 Chunk Summaries & Questions")
-    final_summary = []
-    for i, chunk in enumerate(chunk_text(text, chunk_size=800)):
-        st.subheader(f"📌 Chunk {i+1}")
+# ---------------- Notes Generator ----------------
+if uploaded_file is not None:
+    st.markdown("### ⚡ Step 2: Summoning notes...")
+    with pdfplumber.open(uploaded_file) as pdf:
+        text = ""
+        for page in pdf.pages:
+            text += page.extract_text() or ""
+    
+    if text.strip() == "":
+        st.error("🚨 No extractable text found in this PDF. Maybe it’s all images?")
+    else:
+        # Simple "notes" → just paragraph breakup
+        notes = "\n\n".join([chunk.strip() for chunk in text.split("\n") if chunk.strip()])
         
-        summary = summarize_text(chunk)
-        questions = generate_questions(chunk)
+        st.success("✅ Done! Your notes are ready below ⬇️")
+        st.text_area("📑 Notes:", notes[:5000], height=300)
 
-        st.write("**AI Summary:**", summary)
-        st.write("**AI Questions:**")
-        for q in questions:
-            st.write("-", q)
+        # Save + download option
+        notes_file = "notes.txt"
+        with open(notes_file, "w", encoding="utf-8") as f:
+            f.write(notes)
 
-        final_summary.append(summary)
-
-    # Final mega-summary
-    st.header("✨ Final Combined AI Summary")
-    st.write(" ".join(final_summary[:8]))
+        with open(notes_file, "rb") as f:
+            st.download_button("⬇️ Download Notes", f, file_name="BrainBox_Notes.txt")
