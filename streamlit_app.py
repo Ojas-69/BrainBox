@@ -4,27 +4,33 @@ import os
 
 st.markdown("""
     <style>
-    /* Fonts */
     @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500&family=Chakra+Petch&display=swap');
 
-    body {
-        background-color: #edf2f7; /* softer light grey-blue */
-        color: #1c1c1c;
-    }
+    /* Background */
     .stApp {
-        background: linear-gradient(135deg, #edf2f7, #dbeafe, #fef9c3);
+        background: linear-gradient(135deg, #f0f9ff, #e6f7ff, #fff7e6);
         font-family: 'Chakra Petch', sans-serif;
+        color: #111111; /* Default text */
     }
+
+    /* Headings */
     h1, h2, h3 {
         font-family: 'Orbitron', sans-serif;
-        color: #1e293b; /* dark slate */
-        text-shadow: 1px 1px 2px #cbd5e1;
+        color: #0f172a; /* navy/black */
+        text-shadow: 1px 1px 2px #ffffff;
     }
-    .upload-msg {
-        text-align: center;
-        font-size: 18px;
-        color: #334155;
-        margin-bottom: 12px;
+
+    /* Regular text */
+    p, span, div {
+        color: #1e293b !important; /* dark gray-blue */
+    }
+
+    /* File uploader box */
+    .stFileUploader {
+        background: #ffffff;
+        border: 2px dashed #64748b;
+        border-radius: 12px;
+        padding: 15px;
     }
     </style>
 """, unsafe_allow_html=True)
