@@ -59,8 +59,8 @@ Star ⭐ the repo if you vibe with it.
 ---
 
 ## 💌 Connect with Me  
-- 📧 Mail: *[your email here]*  
-- 🐙 GitHub: [Brain_Box](https://github.com/your-username/Brain_Box)  
+- 📧 Mail: *mohiteojas56@gmail.com*  
+- 🐙 GitHub: [BrainBox](https://github.com/Ojas-69/BrainBox)  
 - 🚀 Future plan: Make this a chill, plug-and-play study buddy for everyone.  
 
 ---
