@@ -1,9 +1,12 @@
 import streamlit as st
+from pathlib import Path
 
-# Title
-st.title("🚀 About Brain_Box")
+css_path = Path("assets/style.css")
+if css_path.exists():
+    st.markdown(f"<style>{css_path.read_text()}</style>", unsafe_allow_html=True)
 
-# Meme tagline
+st.markdown("<h1>About BrainBox</h1>", unsafe_allow_html=True)
+st.markdown("<p class='subheader'>Made with ❤️ by Ojas</p>", unsafe_allow_html=True)
 st.subheader("💡 Like J.A.R.V.I.S, but for your exams (and way more broke).")
 
 # Intro
