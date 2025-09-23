@@ -4,46 +4,71 @@ import os
 
 st.markdown("""
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@600&family=Chakra+Petch&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
 
-    /* Background - brighter sci-fi vibe */
+    /* Background - soft minimalist */
     .stApp {
-        background: linear-gradient(135deg, #dbeafe, #f0f9ff, #f5f3ff);
-        font-family: 'Chakra Petch', sans-serif;
-        color: #111827;
+        background: #f9fafb;
+        font-family: 'Inter', sans-serif;
+        color: #1f2937;
     }
 
-    /* Title + headings */
+    /* Headings with pastel highlight */
     h1, h2, h3 {
-        font-family: 'Orbitron', sans-serif;
-        color: #1e1b4b;
-        text-shadow: 0px 0px 6px #a78bfa;
+        font-weight: 600;
+        color: #111827;
+        letter-spacing: -0.5px;
+        padding-bottom: 4px;
+        border-bottom: 3px solid #a5b4fc; /* soft indigo highlight */
+        display: inline-block;
     }
 
-    /* File uploader */
+    /* File uploader - flat, no chunky box */
     .stFileUploader {
-        background: #ffffff;
-        border: 2px dashed #6366f1;
-        border-radius: 16px;
-        padding: 18px;
-        transition: 0.3s ease-in-out;
+        background: transparent;
+        border: 2px dashed #d1d5db;
+        border-radius: 10px;
+        padding: 16px;
+        text-align: center;
+        transition: 0.2s ease-in-out;
     }
     .stFileUploader:hover {
-        border-color: #a855f7;
-        box-shadow: 0 0 10px #a78bfa;
+        border-color: #818cf8; /* indigo highlight */
+        background: #eef2ff; /* very soft indigo */
     }
 
-    /* Notes output boxes */
+    /* Notes output - clean text only */
     .stMarkdown {
-        background: #fdf4ff;
-        padding: 14px;
-        border-radius: 12px;
-        margin-bottom: 12px;
-        border: 1px solid #e9d5ff;
-        box-shadow: 0 0 8px #f0abfc55;
+        background: transparent !important;
+        padding: 10px 0;
+        border: none !important;
+        box-shadow: none !important;
+        margin-bottom: 14px;
+        font-size: 1rem;
+        line-height: 1.6;
+    }
+
+    /* Accent on bullet points / lists */
+    .stMarkdown ul li::marker {
+        color: #10b981; /* soft green */
+        font-weight: bold;
+    }
+
+    /* Buttons */
+    .stDownloadButton > button {
+        background: #6366f1; /* indigo */
+        color: #ffffff;
+        border-radius: 8px;
+        padding: 8px 16px;
+        font-weight: 500;
+        transition: 0.2s ease-in-out;
+    }
+    .stDownloadButton > button:hover {
+        background: #4f46e5;
     }
     </style>
 """, unsafe_allow_html=True)
+
 
 
 
