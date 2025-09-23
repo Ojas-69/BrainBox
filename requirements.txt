@@ -1,6 +1,6 @@
 streamlit
-pdfplumber
 transformers
 torch
+PyPDF2
 sentencepiece
-regex
+accelerate
