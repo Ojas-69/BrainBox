@@ -1,42 +1,59 @@
 import streamlit as st
-import PyPDF2
+import pdfplumber
+import re
 from transformers import pipeline
-from pathlib import Path
 
-# Load custom CSS
-css_path = Path("assets/style.css")
-if css_path.exists():
-    st.markdown(f"<style>{css_path.read_text()}</style>", unsafe_allow_html=True)
+# Summarizer model
+summarizer = pipeline("summarization", model="facebook/bart-large-cnn")
 
-# Cache summarizer
-@st.cache_resource
-def load_summarizer():
-    return pipeline("summarization", model="facebook/bart-large-cnn")
+# Smart chunking function
+def split_into_chunks(text, max_words=600):
+    sentences = re.split(r'(?<=[.!?]) +', text)
+    chunks, current_chunk, words = [], [], 0
 
-summarizer = load_summarizer()
+    for sent in sentences:
+        word_count = len(sent.split())
+        if words + word_count > max_words:
+            chunks.append(" ".join(current_chunk))
+            current_chunk, words = [], 0
+        current_chunk.append(sent)
+        words += word_count
+    if current_chunk:
+        chunks.append(" ".join(current_chunk))
+    return chunks
 
-# Hero section
-st.markdown("<h1>BrainBox</h1>", unsafe_allow_html=True)
-st.markdown("<p class='subheader'>Smart notes from your PDFs — quick, clean & distraction-free.</p>", unsafe_allow_html=True)
-
-# Upload box
-st.markdown("<h2 class='section-title'>Upload Your PDF</h2>", unsafe_allow_html=True)
-uploaded_file = st.file_uploader("Choose a PDF", type=["pdf"])
-
-if uploaded_file:
-    st.markdown("<h2 class='section-title'>Your Notes</h2>", unsafe_allow_html=True)
-    try:
-        pdf_reader = PyPDF2.PdfReader(uploaded_file)
-        text = ""
-        for page in pdf_reader.pages:
+# ✅ New extractor (replacing PyPDF2)
+def extract_text_from_pdf(pdf_file):
+    text = ""
+    with pdfplumber.open(pdf_file) as pdf:
+        for page in pdf.pages:
             page_text = page.extract_text()
-            if page_text:
+            if page_text:  
                 text += page_text + "\n"
+    return text
 
-        summary = summarizer(text, max_length=200, min_length=50, do_sample=False)[0]["summary_text"]
-        st.markdown(f"<div class='notes-area'><p>{summary}</p></div>", unsafe_allow_html=True)
+# Summarizer function
+def summarize_text(full_text):
+    chunks = split_into_chunks(full_text)
+    summaries = []
+    for chunk in chunks:
+        summary = summarizer(chunk, max_length=200, min_length=80, do_sample=False)
+        summaries.append(summary[0]['summary_text'])
+    # Merge into one final summary
+    combined = " ".join(summaries)
+    final_summary = summarizer(combined, max_length=300, min_length=150, do_sample=False)
+    return final_summary[0]['summary_text']
 
-        st.download_button("Download Notes", summary, file_name="BrainBox_Notes.txt")
+# Streamlit UI
+st.title("🧠 BrainBox - Smart PDF Notes Generator")
+uploaded_file = st.file_uploader("Upload your PDF here", type=["pdf"])
 
-    except Exception as e:
-        st.error("Couldn’t process this file. Try another one 🙃")
+if uploaded_file is not None:
+    st.info("Processing your PDF... ⏳ This may take a while for big files.")
+    raw_text = extract_text_from_pdf(uploaded_file)
+    if raw_text.strip():
+        summary = summarize_text(raw_text)
+        st.subheader("📝 Generated Notes")
+        st.write(summary)
+    else:
+        st.error("Could not extract any text from this PDF. Try another file.")
