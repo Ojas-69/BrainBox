@@ -4,33 +4,37 @@ import os
 
 st.markdown("""
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500&family=Chakra+Petch&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@600&family=Chakra+Petch&display=swap');
 
-    /* Background */
+    /* Background - clean gradient */
     .stApp {
-        background: linear-gradient(135deg, #f0f9ff, #e6f7ff, #fff7e6);
+        background: linear-gradient(135deg, #e0f7fa, #f1f5f9, #e0e7ff);
         font-family: 'Chakra Petch', sans-serif;
-        color: #111111; /* Default text */
+        color: #111827;
     }
 
     /* Headings */
     h1, h2, h3 {
         font-family: 'Orbitron', sans-serif;
-        color: #0f172a; /* navy/black */
-        text-shadow: 1px 1px 2px #ffffff;
+        color: #0f172a;
+        text-shadow: 1px 1px 2px #94a3b8;
     }
 
-    /* Regular text */
-    p, span, div {
-        color: #1e293b !important; /* dark gray-blue */
-    }
-
-    /* File uploader box */
+    /* Upload box */
     .stFileUploader {
-        background: #ffffff;
-        border: 2px dashed #64748b;
-        border-radius: 12px;
-        padding: 15px;
+        background: #f8fafc;
+        border: 2px dashed #6366f1;
+        border-radius: 15px;
+        padding: 20px;
+    }
+
+    /* Notes section */
+    .stMarkdown {
+        background: #ffffffaa;
+        padding: 12px;
+        border-radius: 10px;
+        margin-bottom: 12px;
+        border: 1px solid #cbd5e1;
     }
     </style>
 """, unsafe_allow_html=True)
