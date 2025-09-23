@@ -1,0 +1,8 @@
+import streamlit as st
+
+st.title("📖 About BrainBox")
+st.write("""
+BrainBox is an AI-powered note maker for students drowning in PDFs.  
+It takes your huge textbooks or lecture notes and makes concise, readable summaries.  
+Built with ❤️ using Streamlit + OpenAI.
+""")
