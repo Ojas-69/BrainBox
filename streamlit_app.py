@@ -61,15 +61,28 @@ def chunk_text(text, max_chunk=700):
     for i in range(0, len(words), max_chunk):
         yield " ".join(words[i:i+max_chunk])
 
+# 📝 Formatter for clean notes
+def format_notes(raw_text: str) -> str:
+    lines = [line.strip("-• ").strip() for line in raw_text.splitlines() if line.strip()]
+    notes = []
+    current_section = None
+
+    for line in lines:
+        # If it's a "Summary:" line → make it a heading
+        if line.lower().startswith("summary:") or line.lower().startswith("summary"):
+            current_section = line.replace("summary:", "").strip().title()
+            notes.append(f"\n### {current_section}\n")
+        else:
+            notes.append(f"- {line}")
+    return "\n".join(notes)
+
 # 📝 Notes Generator
 def generate_notes(text):
     chunks = chunk_text(text)
     notes = []
     for chunk in chunks:
         summary = summarizer(chunk, max_length=120, min_length=40, do_sample=False)[0]['summary_text']
-        # 👉 Format into bullet-style notes
-        formatted = "\n".join([f"- {line.strip()}" for line in summary.split(".") if line.strip()])
-        notes.append(formatted)
+        notes.append(summary)
     return "\n\n".join(notes)
 
 # 🔥 Main logic
@@ -79,4 +92,5 @@ if uploaded_file:
         with st.spinner("BrainBox is thinking... 🧠"):
             raw_text = extract_text(uploaded_file)
             notes = generate_notes(raw_text)
-        st.markdown('<div class="notes">' + notes.replace("\n", "<br>") + "</div>", unsafe_allow_html=True)
+            clean_notes = format_notes(notes)
+        st.markdown('<div class="notes">' + clean_notes.replace("\n", "<br>") + "</div>", unsafe_allow_html=True)
