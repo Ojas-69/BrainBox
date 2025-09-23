@@ -1,0 +1,29 @@
+
+---
+
+### 📌 File: `pages/How_It_Works.py`
+```python
+import streamlit as st
+
+# Title
+st.title("⚡ How It Works")
+
+# Main Content
+st.markdown("""
+### Step 1: Upload your PDF 📄
+Just drag & drop a file (even if it’s 1000+ pages).  
+
+### Step 2: AI does the heavy lifting 🧠
+We slice the PDF into chunks and use Hugging Face models to generate notes.  
+
+### Step 3: Get your notes instantly ✨
+Copy, save, or just read them right in the app.  
+
+---
+
+### Customizing This Page  
+All this text lives in `pages/How_It_Works.py`.  
+Change the steps, add gifs, or even drop in diagrams with:
+
+```python
+st.image("diagram.png")
