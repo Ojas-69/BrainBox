@@ -1,4 +1,4 @@
-import streamlit as st
+ import streamlit as st
 import pdfplumber
 import os
 
@@ -6,38 +6,45 @@ st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@600&family=Chakra+Petch&display=swap');
 
-    /* Background - clean gradient */
+    /* Background - brighter sci-fi vibe */
     .stApp {
-        background: linear-gradient(135deg, #e0f7fa, #f1f5f9, #e0e7ff);
+        background: linear-gradient(135deg, #dbeafe, #f0f9ff, #f5f3ff);
         font-family: 'Chakra Petch', sans-serif;
         color: #111827;
     }
 
-    /* Headings */
+    /* Title + headings */
     h1, h2, h3 {
         font-family: 'Orbitron', sans-serif;
-        color: #0f172a;
-        text-shadow: 1px 1px 2px #94a3b8;
+        color: #1e1b4b;
+        text-shadow: 0px 0px 6px #a78bfa;
     }
 
-    /* Upload box */
+    /* File uploader */
     .stFileUploader {
-        background: #f8fafc;
+        background: #ffffff;
         border: 2px dashed #6366f1;
-        border-radius: 15px;
-        padding: 20px;
+        border-radius: 16px;
+        padding: 18px;
+        transition: 0.3s ease-in-out;
+    }
+    .stFileUploader:hover {
+        border-color: #a855f7;
+        box-shadow: 0 0 10px #a78bfa;
     }
 
-    /* Notes section */
+    /* Notes output boxes */
     .stMarkdown {
-        background: #ffffffaa;
-        padding: 12px;
-        border-radius: 10px;
+        background: #fdf4ff;
+        padding: 14px;
+        border-radius: 12px;
         margin-bottom: 12px;
-        border: 1px solid #cbd5e1;
+        border: 1px solid #e9d5ff;
+        box-shadow: 0 0 8px #f0abfc55;
     }
     </style>
 """, unsafe_allow_html=True)
+
 
 
 # ---------------- Title ----------------
