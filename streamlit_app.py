@@ -1,52 +1,82 @@
 import streamlit as st
 from transformers import pipeline
+from PyPDF2 import PdfReader
 
-# Load summarizer model
-summarizer = pipeline("summarization", model="facebook/bart-large-cnn")
+# 🎨 Styling
+st.markdown("""
+    <style>
+    body {
+        background-color: #0d1117;
+        color: #e6edf3;
+        font-family: 'Trebuchet MS', sans-serif;
+    }
+    .title {
+        font-size: 36px;
+        font-weight: bold;
+        color: #00ffcc;
+        text-align: center;
+    }
+    .tagline {
+        font-size: 18px;
+        color: #58a6ff;
+        text-align: center;
+        margin-bottom: 30px;
+    }
+    .notes {
+        background-color: #161b22;
+        padding: 15px;
+        border-radius: 10px;
+        margin: 10px 0;
+        font-size: 16px;
+        line-height: 1.6;
+    }
+    </style>
+""", unsafe_allow_html=True)
 
-# Function to split text into safe chunks (so model doesn't explode)
-def split_text(text, max_chunk_size=900):
+# 🚀 Title
+st.markdown('<div class="title">🧠 BrainBox</div>', unsafe_allow_html=True)
+st.markdown('<div class="tagline">Turn boring PDFs into clean study notes ✨</div>', unsafe_allow_html=True)
+
+# 📂 Upload PDF
+uploaded_file = st.file_uploader("📄 Upload your PDF", type=["pdf"])
+
+# 🧠 Load HuggingFace summarizer
+@st.cache_resource
+def load_model():
+    return pipeline("summarization", model="google/flan-t5-base")
+
+summarizer = load_model()
+
+# 📑 Extract text
+def extract_text(pdf_file):
+    reader = PdfReader(pdf_file)
+    text = ""
+    for page in reader.pages:
+        text += page.extract_text() + "\n"
+    return text
+
+# ✨ Chunking function
+def chunk_text(text, max_chunk=700):
     words = text.split()
-    chunks, current = [], []
+    for i in range(0, len(words), max_chunk):
+        yield " ".join(words[i:i+max_chunk])
 
-    for word in words:
-        if sum(len(w) for w in current) + len(word) + len(current) <= max_chunk_size:
-            current.append(word)
-        else:
-            chunks.append(" ".join(current))
-            current = [word]
-    if current:
-        chunks.append(" ".join(current))
-    return chunks
-
-# Function to summarize safely
-def summarize_text(text):
-    chunks = split_text(text)
-    summaries = []
+# 📝 Notes Generator
+def generate_notes(text):
+    chunks = chunk_text(text)
+    notes = []
     for chunk in chunks:
-        summary = summarizer(
-            chunk,
-            max_length=200,
-            min_length=80,
-            do_sample=False
-        )
-        summaries.append(summary[0]['summary_text'])
-    return " ".join(summaries)
+        summary = summarizer(chunk, max_length=120, min_length=40, do_sample=False)[0]['summary_text']
+        # 👉 Format into bullet-style notes
+        formatted = "\n".join([f"- {line.strip()}" for line in summary.split(".") if line.strip()])
+        notes.append(formatted)
+    return "\n\n".join(notes)
 
-# Streamlit UI
-st.title("BrainBox – PDF Summarizer 🧠📄")
-uploaded_file = st.file_uploader("Upload your PDF", type="pdf")
-
-if uploaded_file is not None:
-    from PyPDF2 import PdfReader
-
-    pdf_reader = PdfReader(uploaded_file)
-    raw_text = ""
-    for page in pdf_reader.pages:
-        raw_text += page.extract_text() + " "
-
-    if st.button("Summarize"):
-        with st.spinner("Cooking up that summary... 🍳"):
-            summary = summarize_text(raw_text)
-        st.subheader("Summary:")
-        st.write(summary)
+# 🔥 Main logic
+if uploaded_file:
+    st.success("✅ PDF uploaded! Click below to generate notes.")
+    if st.button("✨ Generate Notes"):
+        with st.spinner("BrainBox is thinking... 🧠"):
+            raw_text = extract_text(uploaded_file)
+            notes = generate_notes(raw_text)
+        st.markdown('<div class="notes">' + notes.replace("\n", "<br>") + "</div>", unsafe_allow_html=True)
