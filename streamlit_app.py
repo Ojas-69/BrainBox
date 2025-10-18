@@ -1,6 +1,7 @@
 import streamlit as st
+import fitz  # PyMuPDF
 from transformers import pipeline
-from PyPDF2 import PdfReader
+import re
 
 # 🎨 Styling
 st.markdown("""
@@ -35,7 +36,7 @@ st.markdown("""
 
 # 🚀 Title
 st.markdown('<div class="title">🧠 BrainBox</div>', unsafe_allow_html=True)
-st.markdown('<div class="tagline">Turn boring PDFs into clean study notes ✨</div>', unsafe_allow_html=True)
+st.markdown('<div class="tagline">Smarter AI Notes Generator — Reads Every Page. Writes Real Notes. 🚀</div>', unsafe_allow_html=True)
 
 # 📂 Upload PDF
 uploaded_file = st.file_uploader("📄 Upload your PDF", type=["pdf"])
@@ -43,54 +44,50 @@ uploaded_file = st.file_uploader("📄 Upload your PDF", type=["pdf"])
 # 🧠 Load HuggingFace summarizer
 @st.cache_resource
 def load_model():
-    return pipeline("summarization", model="google/flan-t5-base")
+    return pipeline("text2text-generation", model="google/flan-t5-large")
 
-summarizer = load_model()
+note_maker = load_model()
 
-# 📑 Extract text
-def extract_text(pdf_file):
-    reader = PdfReader(pdf_file)
+# 📖 Extract text using PyMuPDF (fitz)
+def extract_text_fitz(pdf_file):
     text = ""
-    for page in reader.pages:
-        text += page.extract_text() + "\n"
+    with fitz.open(stream=pdf_file.read(), filetype="pdf") as doc:
+        for page in doc:
+            text += page.get_text("text") + "\n"
     return text
 
-# ✨ Chunking function
-def chunk_text(text, max_chunk=700):
-    words = text.split()
-    for i in range(0, len(words), max_chunk):
-        yield " ".join(words[i:i+max_chunk])
+# 🧹 Clean text
+def clean_text(text):
+    text = re.sub(r'\s+', ' ', text)  # remove excessive whitespace
+    text = text.replace("•", "-")      # unify bullet points
+    return text.strip()
 
-# 📝 Formatter for clean notes
-def format_notes(raw_text: str) -> str:
-    lines = [line.strip("-• ").strip() for line in raw_text.splitlines() if line.strip()]
-    notes = []
-    current_section = None
+# ✂️ Split into readable chunks (by sentence count)
+def chunk_text_by_sentences(text, max_sentences=5):
+    sentences = re.split(r'(?<=[.!?]) +', text)
+    for i in range(0, len(sentences), max_sentences):
+        yield " ".join(sentences[i:i + max_sentences])
 
-    for line in lines:
-        # If it's a "Summary:" line → make it a heading
-        if line.lower().startswith("summary:") or line.lower().startswith("summary"):
-            current_section = line.replace("summary:", "").strip().title()
-            notes.append(f"\n### {current_section}\n")
-        else:
-            notes.append(f"- {line}")
-    return "\n".join(notes)
-
-# 📝 Notes Generator
+# 📝 Generate study notes
 def generate_notes(text):
-    chunks = chunk_text(text)
+    clean = clean_text(text)
+    chunks = chunk_text_by_sentences(clean)
     notes = []
     for chunk in chunks:
-        summary = summarizer(chunk, max_length=120, min_length=40, do_sample=False)[0]['summary_text']
-        notes.append(summary)
+        prompt = f"Convert this text into clear, bullet-point study notes:\n\n{chunk}"
+        summary = note_maker(prompt, max_length=300, min_length=80, do_sample=False)
+        notes.append(summary[0]['generated_text'])
     return "\n\n".join(notes)
 
 # 🔥 Main logic
 if uploaded_file:
-    st.success("✅ PDF uploaded! Click below to generate notes.")
+    st.success("✅ PDF uploaded successfully!")
     if st.button("✨ Generate Notes"):
-        with st.spinner("BrainBox is thinking... 🧠"):
-            raw_text = extract_text(uploaded_file)
-            notes = generate_notes(raw_text)
-            clean_notes = format_notes(notes)
-        st.markdown('<div class="notes">' + clean_notes.replace("\n", "<br>") + "</div>", unsafe_allow_html=True)
+        with st.spinner("🧠 BrainBox is processing your document..."):
+            raw_text = extract_text_fitz(uploaded_file)
+            if len(raw_text.strip()) < 100:
+                st.error("😕 Couldn't read enough text from this PDF. Try another one or check if it's scanned.")
+            else:
+                notes = generate_notes(raw_text)
+                st.markdown('<div class="notes">' + notes.replace("\n", "<br>") + "</div>", unsafe_allow_html=True)
+                st.download_button("📥 Download Notes", notes, file_name="AI_Notes.txt")
