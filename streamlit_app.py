@@ -84,24 +84,35 @@ def generate_notes(text):
         notes.append(summary[0]['generated_text'])
     return "\n\n".join(notes)
 
-# 🎯 Generate Questions (fixed for long notes)
+# 🧩 Question Generator (fixed version)
+@st.cache_resource
+def load_question_model():
+    return pipeline(
+        "text2text-generation",
+        model="iarfmoose/t5-base-question-generator",
+        tokenizer="iarfmoose/t5-base-question-generator"
+    )
+
+question_maker = load_question_model()
+
 def generate_questions(text, q_type):
     clean = clean_text(text)
-    chunks = list(chunk_text_by_sentences(clean, max_sentences=4))  # also chunked
+    chunks = list(chunk_text_by_sentences(clean, max_sentences=4))
     questions = []
 
     for chunk in chunks:
         if q_type == "MCQs":
-            prompt = f"Generate 3 multiple-choice questions with options and answers based on this text:\n\n{chunk}"
+            prompt = f"Generate 3 multiple-choice questions with 4 options and correct answers based on the text:\n\n{chunk}"
         elif q_type == "Short Answer":
-            prompt = f"Generate 3 short-answer questions based on this content:\n\n{chunk}"
+            prompt = f"Generate 3 short-answer questions from this text:\n\n{chunk}"
         else:
-            prompt = f"Generate 3 conceptual or analytical questions from this material:\n\n{chunk}"
+            prompt = f"Generate 3 conceptual or analytical questions from this content:\n\n{chunk}"
 
         result = question_maker(prompt, max_new_tokens=256, do_sample=False)
         questions.append(result[0]['generated_text'])
 
     return "\n\n".join(questions)
+
 
 
 
