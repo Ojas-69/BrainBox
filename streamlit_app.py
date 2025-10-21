@@ -1,150 +1,141 @@
+import os
 import streamlit as st
 import fitz  # PyMuPDF
-from transformers import pipeline
+from huggingface_hub import InferenceClient
 import re
+
+st.set_page_config(page_title="BrainBox 2.0", page_icon="🧠", layout="centered")
 
 # 🎨 Styling
 st.markdown("""
     <style>
-    body {
-        background-color: #0d1117;
-        color: #e6edf3;
-        font-family: 'Trebuchet MS', sans-serif;
-    }
-    .title {
-        font-size: 36px;
-        font-weight: bold;
-        color: #00ffcc;
-        text-align: center;
-    }
-    .tagline {
-        font-size: 18px;
-        color: #58a6ff;
-        text-align: center;
-        margin-bottom: 30px;
-    }
-    .notes {
-        background-color: #161b22;
-        padding: 15px;
-        border-radius: 10px;
-        margin: 10px 0;
-        font-size: 16px;
-        line-height: 1.6;
-    }
+    body {background-color: #0d1117; color: #e6edf3; font-family: 'Trebuchet MS', sans-serif;}
+    .title {font-size: 40px; font-weight: bold; color: #00ffcc; text-align: center;}
+    .tagline {font-size: 18px; color: #58a6ff; text-align: center; margin-bottom: 40px;}
+    .notes {background-color: #161b22; padding: 15px; border-radius: 10px; margin: 10px 0; font-size: 16px; line-height: 1.6;}
     </style>
 """, unsafe_allow_html=True)
 
-# 🚀 Title
-st.markdown('<div class="title">🧠 BrainBox</div>', unsafe_allow_html=True)
-st.markdown('<div class="tagline">From Notes to Questions — Powered by AI & ML ⚙️</div>', unsafe_allow_html=True)
+st.markdown('<div class="title">🧠 BrainBox 2.0</div>', unsafe_allow_html=True)
+st.markdown('<div class="tagline">AI-Powered Notes & Question Generator 🚀</div>', unsafe_allow_html=True)
 
-# 🧩 Tabs
+# Tabs
 tab1, tab2 = st.tabs(["📝 Notes Generator", "❓ Question Generator"])
 
-# 🧠 Load models
-@st.cache_resource
-def load_summary_model():
-    return pipeline("text2text-generation", model="google/flan-t5-large")
+# Hugging Face Inference API token (set in Streamlit secrets or environment)
+HF_TOKEN = st.secrets["HF_TOKEN"] if "HF_TOKEN" in st.secrets else os.environ.get("HF_TOKEN")
 
 @st.cache_resource
-def load_question_model():
-    return pipeline("text2text-generation", model="valhalla/t5-small-qg-hl")
+def get_hf_client():
+    if not HF_TOKEN:
+        return None
+    return InferenceClient(token=HF_TOKEN)
 
-summarizer = load_summary_model()
-question_maker = load_question_model()
+client = get_hf_client()
 
-# 📖 Extract text using PyMuPDF
+# remote model ids
+SUMMARY_MODEL = "google/flan-t5-base"
+QUESTION_MODEL = "iarfmoose/t5-base-question-generator"
+
+def call_model(model_id, prompt, max_new_tokens=256):
+    if client is None:
+        raise RuntimeError("No Hugging Face token configured. Set HF_TOKEN in Streamlit secrets or environment.")
+    try:
+        resp = client.text_generation(model=model_id, inputs=prompt, parameters={"max_new_tokens": max_new_tokens})
+        if isinstance(resp, list) and len(resp) > 0:
+            return resp[0].get("generated_text", "") or str(resp[0])
+        return str(resp)
+    except Exception as e:
+        raise RuntimeError(f"Model call failed: {e}")
+
+# PDF extraction
 def extract_text_fitz(pdf_file):
     text = ""
-    with fitz.open(stream=pdf_file.read(), filetype="pdf") as doc:
-        for page in doc:
-            text += page.get_text("text") + "\n"
+    try:
+        pdf_file.seek(0)
+        data = pdf_file.read()
+        with fitz.open(stream=data, filetype="pdf") as doc:
+            for page in doc:
+                text += page.get_text("text") + "\n"
+    except Exception:
+        return ""
     return text
 
-# 🧹 Clean text
+# Cleaning
 def clean_text(text):
     text = re.sub(r'\s+', ' ', text)
-    text = text.replace("•", "-")
     return text.strip()
 
-# ✂️ Split into chunks
-def chunk_text_by_sentences(text, max_sentences=5):
+# Chunking
+def chunk_text_by_sentences(text, max_sentences=3):
     sentences = re.split(r'(?<=[.!?]) +', text)
     for i in range(0, len(sentences), max_sentences):
         yield " ".join(sentences[i:i + max_sentences])
 
-# 📝 Generate Notes (fixed for long inputs)
+# Notes generation (remote)
 def generate_notes(text):
     clean = clean_text(text)
-    chunks = list(chunk_text_by_sentences(clean, max_sentences=4))  # smaller chunks
+    chunks = list(chunk_text_by_sentences(clean))
     notes = []
     for chunk in chunks:
-        prompt = f"Convert this text into clear, concise study notes:\n\n{chunk}"
-        summary = summarizer(prompt, max_new_tokens=256, do_sample=False)
-        notes.append(summary[0]['generated_text'])
-    return "\n\n".join(notes)
+        prompt = f"Convert this into clear, structured study notes:\n\n{chunk}"
+        try:
+            gen = call_model(SUMMARY_MODEL, prompt, max_new_tokens=256)
+            notes.append(gen.strip())
+        except Exception as e:
+            notes.append(f"[Error generating notes for this chunk: {e}]")
+    return "\n\n".join(n for n in notes if n)
 
-# 🧩 Question Generator (fixed version)
-@st.cache_resource
-def load_question_model():
-    return pipeline(
-        "text2text-generation",
-        model="iarfmoose/t5-base-question-generator",
-        tokenizer="iarfmoose/t5-base-question-generator"
-    )
-
-question_maker = load_question_model()
-
+# Question generation (remote)
 def generate_questions(text, q_type):
     clean = clean_text(text)
-    chunks = list(chunk_text_by_sentences(clean, max_sentences=4))
+    chunks = list(chunk_text_by_sentences(clean))
     questions = []
-
     for chunk in chunks:
         if q_type == "MCQs":
-            prompt = f"Generate 3 multiple-choice questions with 4 options and correct answers based on the text:\n\n{chunk}"
+            prompt = f"Generate 3 multiple choice questions with answers from:\n\n{chunk}"
         elif q_type == "Short Answer":
-            prompt = f"Generate 3 short-answer questions from this text:\n\n{chunk}"
+            prompt = f"Generate 3 short-answer questions from:\n\n{chunk}"
         else:
-            prompt = f"Generate 3 conceptual or analytical questions from this content:\n\n{chunk}"
+            prompt = f"Generate 3 conceptual or analytical questions from:\n\n{chunk}"
+        try:
+            gen = call_model(QUESTION_MODEL, prompt, max_new_tokens=256)
+            questions.append(gen.strip())
+        except Exception as e:
+            questions.append(f"[Error generating questions for this chunk: {e}]")
+    return "\n\n".join(q for q in questions if q)
 
-        result = question_maker(prompt, max_new_tokens=256, do_sample=False)
-        questions.append(result[0]['generated_text'])
-
-    return "\n\n".join(questions)
-
-
-
-
-# ---------------- TAB 1: Notes Generator ---------------- #
+# 🧾 Notes Tab
 with tab1:
     st.subheader("📄 Upload your PDF for AI Notes")
-    uploaded_file = st.file_uploader("Upload a PDF", type=["pdf"], key="notes")
-
+    uploaded_file = st.file_uploader("Upload a PDF", type=["pdf"])
     if uploaded_file:
-        st.success("✅ PDF uploaded successfully!")
-        if st.button("✨ Generate Notes"):
-            with st.spinner("🧠 BrainBox is analyzing your document..."):
-                raw_text = extract_text_fitz(uploaded_file)
-                if len(raw_text.strip()) < 100:
-                    st.error("😕 Couldn't read enough text from this PDF. Try another one or check if it's scanned.")
-                else:
-                    notes = generate_notes(raw_text)
-                    st.markdown('<div class="notes">' + notes.replace("\n", "<br>") + "</div>", unsafe_allow_html=True)
-                    st.download_button("📥 Download Notes", notes, file_name="AI_Notes.txt")
+        if st.button("✨ Generate Notes", key="generate_notes_button"):
+            if client is None:
+                st.error("HF_TOKEN not configured. Add it to Streamlit secrets or set HF_TOKEN env var.")
+            else:
+                with st.spinner("Processing PDF..."):
+                    text = extract_text_fitz(uploaded_file)
+                    if len(text.strip()) < 50:
+                        st.error("This PDF seems empty or scanned. Try another one.")
+                    else:
+                        notes = generate_notes(text)
+                        st.markdown('<div class="notes">' + notes.replace("\n", "<br>") + "</div>", unsafe_allow_html=True)
+                        st.download_button("📥 Download Notes", notes, file_name="AI_Notes.txt")
 
-# ---------------- TAB 2: Question Generator ---------------- #
+# ❓ Questions Tab
 with tab2:
-    st.subheader("🎯 Generate Questions using AI")
-    input_text = st.text_area("Paste your notes or text here:", height=200)
-    q_type = st.selectbox("Select Question Type:", ["MCQs", "Short Answer", "Conceptual / Analytical"])
-
-    if st.button("🤖 Generate Questions"):
-        if len(input_text.strip()) < 50:
-            st.warning("⚠️ Please enter some text or paste your notes first.")
+    st.subheader("🎯 Generate Questions")
+    user_text = st.text_area("Paste your notes or text:", height=200)
+    q_type = st.selectbox("Select Question Type:", ["MCQs", "Short Answer", "Conceptual"])
+    if st.button("🤖 Generate Questions", key="generate_questions_button"):
+        if len(user_text.strip()) < 30:
+            st.warning("Please add some text first.")
         else:
-            with st.spinner("Generating smart questions... 🧩"):
-                questions = generate_questions(input_text, q_type)
-                st.markdown("### 🧩 AI-Generated Questions")
-                st.markdown('<div class="notes">' + questions.replace("\n", "<br>") + "</div>", unsafe_allow_html=True)
-                st.download_button("📘 Download Questions", questions, file_name="AI_Questions.txt")
+            if client is None:
+                st.error("HF_TOKEN not configured. Add it to Streamlit secrets or set HF_TOKEN env var.")
+            else:
+                with st.spinner("AI is crafting your questions..."):
+                    qs = generate_questions(user_text, q_type)
+                    st.markdown('<div class="notes">' + qs.replace("\n", "<br>") + "</div>", unsafe_allow_html=True)
+                    st.download_button("📘 Download Questions", qs, file_name="AI_Questions.txt")
