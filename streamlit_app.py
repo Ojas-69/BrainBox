@@ -31,7 +31,16 @@ def get_hf_client():
         return None
     return InferenceClient(token=HF_TOKEN)
 
+# create client (allow temporary input when missing)
 client = get_hf_client()
+if client is None:
+    token_input = st.text_input(
+        "Hugging Face token (temporary)",
+        type="password",
+        help="Paste HF token to run model calls now. For deployments, set HF_TOKEN in Streamlit secrets or env vars."
+    )
+    if token_input:
+        client = InferenceClient(token=token_input)
 
 # remote model ids
 SUMMARY_MODEL = "google/flan-t5-base"
