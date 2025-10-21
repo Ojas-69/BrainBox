@@ -27,7 +27,7 @@ HF_TOKEN = st.secrets["HF_TOKEN"] if "HF_TOKEN" in st.secrets else os.environ.ge
 
 @st.cache_resource
 def get_hf_client():
-    if not HF_TOKEN:
+    if not HF_TOKEN: "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"
         return None
     return InferenceClient(token=HF_TOKEN)
 
@@ -50,7 +50,7 @@ def call_model(model_id, prompt, max_new_tokens=256):
     if client is None:
         raise RuntimeError("No Hugging Face token configured. Set HF_TOKEN in Streamlit secrets or environment.")
     try:
-        resp = client.text_generation(model=model_id, inputs=prompt, parameters={"max_new_tokens": max_new_tokens})
+       resp = client.text_generation(model=model_id, prompt=prompt, max_new_tokens=max_new_tokens)
         if isinstance(resp, list) and len(resp) > 0:
             return resp[0].get("generated_text", "") or str(resp[0])
         return str(resp)
