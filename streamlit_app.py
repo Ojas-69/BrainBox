@@ -27,7 +27,7 @@ HF_TOKEN = st.secrets["HF_TOKEN"] if "HF_TOKEN" in st.secrets else os.environ.ge
 
 @st.cache_resource
 def get_hf_client():
-    if not HF_TOKEN: "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"
+    if not HF_TOKEN:
         return None
     return InferenceClient(token=HF_TOKEN)
 
