@@ -47,32 +47,35 @@ SUMMARY_MODEL = "facebook/bart-large-cnn"
 QUESTION_MODEL = "valhalla/t5-small-qa-qg-hl"
 
 #call model shi
-def call_model(model_id, prompt, task="generation", max_new_tokens=256):
+def call_model(model_id, prompt, max_new_tokens=256):
     if client is None:
         raise RuntimeError("No Hugging Face token configured. Set HF_TOKEN in Streamlit secrets or environment.")
 
     try:
-        if task == "summarization":
-            # For summarization-based models (like bart, t5, flan)
-            result = client.post(
-                f"https://api-inference.huggingface.co/models/{model_id}",
-                json={"inputs": prompt, "parameters": {"max_new_tokens": max_new_tokens}},
-            )
-            return result[0]["summary_text"] if isinstance(result, list) else str(result)
-
-        else:  # default to text generation
-            result = client.text_generation(model=model_id, prompt=prompt, max_new_tokens=max_new_tokens)
-            if isinstance(result, list) and len(result) > 0:
-                return result[0].get("generated_text", "") or str(result[0])
-            elif isinstance(result, dict):
-                return result.get("generated_text", str(result))
+        # Automatically choose summarization vs generation
+        if "bart" in model_id or "t5" in model_id:
+            # Summarization models use the summarization endpoint
+            resp = client.summarization(model=model_id, text=prompt)
+            if isinstance(resp, list) and len(resp) > 0:
+                return resp[0].get("summary_text", "") or str(resp[0])
+            elif isinstance(resp, dict):
+                return resp.get("summary_text", str(resp))
             else:
-                return str(result)
+                return str(resp)
+        else:
+            # Text generation models
+            resp = client.text_generation(model=model_id, prompt=prompt, max_new_tokens=max_new_tokens)
+            if isinstance(resp, list) and len(resp) > 0:
+                return resp[0].get("generated_text", "") or str(resp[0])
+            elif isinstance(resp, dict):
+                return resp.get("generated_text", str(resp))
+            else:
+                return str(resp)
 
     except Exception as e:
         import traceback
-        raise RuntimeError(f"Model call failed: {e}\n\n{traceback.format_exc()}")
-
+        err_msg = traceback.format_exc()
+        raise RuntimeError(f"Model call failed: {e}\n\n{err_msg}")
 
 # PDF extraction
 def extract_text_fitz(pdf_file):
