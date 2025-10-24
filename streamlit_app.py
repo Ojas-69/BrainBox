@@ -49,27 +49,32 @@ QUESTION_MODEL = "valhalla/t5-small-qa-qg-hl"
 def call_model(model_id, prompt, max_new_tokens=256):
     if client is None:
         raise RuntimeError("No Hugging Face token configured. Set HF_TOKEN in Streamlit secrets or environment.")
-    try:
-        # Make the API call (new syntax)
-        resp = client.text_generation(
-            model=model_id,
-            prompt=prompt,
-            max_new_tokens=max_new_tokens
-        )
 
-        # Debug: if response is a dict or list, print it
-        if isinstance(resp, dict):
-            return resp.get("generated_text", str(resp))
-        elif isinstance(resp, list) and len(resp) > 0:
-            return resp[0].get("generated_text", "") or str(resp[0])
+    try:
+        # Pick the correct task depending on model
+        if "bart" in model_id or "t5" in model_id:
+            # summarization model
+            resp = client.summarization(model=model_id, inputs=prompt)
+            if isinstance(resp, list) and len(resp) > 0:
+                return resp[0].get("summary_text", "") or str(resp[0])
+            elif isinstance(resp, dict):
+                return resp.get("summary_text", str(resp))
+            else:
+                return str(resp)
         else:
-            return str(resp)
+            # fallback for text-generation models
+            resp = client.text_generation(model=model_id, prompt=prompt, max_new_tokens=max_new_tokens)
+            if isinstance(resp, list) and len(resp) > 0:
+                return resp[0].get("generated_text", "") or str(resp[0])
+            elif isinstance(resp, dict):
+                return resp.get("generated_text", str(resp))
+            else:
+                return str(resp)
 
     except Exception as e:
         import traceback
         err_msg = traceback.format_exc()
         raise RuntimeError(f"Model call failed: {e}\n\n{err_msg}")
-
 
 # PDF extraction
 def extract_text_fitz(pdf_file):
