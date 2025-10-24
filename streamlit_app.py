@@ -43,8 +43,8 @@ if client is None:
         client = InferenceClient(token=token_input)
 
 # remote model ids
-SUMMARY_MODEL = "google/flan-t5-base"
-QUESTION_MODEL = "iarfmoose/t5-base-question-generator"
+SUMMARY_MODEL = "facebook/bart-large-cnn"
+QUESTION_MODEL = "valhalla/t5-small-qa-qg-hl"
 
 def call_model(model_id, prompt, max_new_tokens=256):
     if client is None:
