@@ -50,7 +50,7 @@ def call_model(model_id, prompt, max_new_tokens=256):
     if client is None:
         raise RuntimeError("No Hugging Face token configured. Set HF_TOKEN in Streamlit secrets or environment.")
      try:
-    resp = client.text_generation(model=model_id, prompt=prompt, max_new_tokens=max_new_tokens)
+        resp = client.text_generation(model=model_id, prompt=prompt, max_new_tokens=max_new_tokens)
     if isinstance(resp, list) and len(resp) > 0:
         return resp[0].get("generated_text", "") or str(resp[0])
     return str(resp)
