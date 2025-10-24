@@ -47,35 +47,32 @@ SUMMARY_MODEL = "facebook/bart-large-cnn"
 QUESTION_MODEL = "valhalla/t5-small-qa-qg-hl"
 
 #call model shi
-def call_model(model_id, prompt, max_new_tokens=256):
+def call_model(model_id, prompt, task="generation", max_new_tokens=256):
     if client is None:
         raise RuntimeError("No Hugging Face token configured. Set HF_TOKEN in Streamlit secrets or environment.")
 
     try:
-        # Automatically choose summarization vs generation
-        if "bart" in model_id or "t5" in model_id:
-            # Summarization models use the summarization endpoint
-            resp = client.summarization(model=model_id, text=prompt)
-            if isinstance(resp, list) and len(resp) > 0:
-                return resp[0].get("summary_text", "") or str(resp[0])
-            elif isinstance(resp, dict):
-                return resp.get("summary_text", str(resp))
+        if task == "summarization":
+            # For summarization-based models (like bart, t5, flan)
+            result = client.post(
+                f"https://api-inference.huggingface.co/models/{model_id}",
+                json={"inputs": prompt, "parameters": {"max_new_tokens": max_new_tokens}},
+            )
+            return result[0]["summary_text"] if isinstance(result, list) else str(result)
+
+        else:  # default to text generation
+            result = client.text_generation(model=model_id, prompt=prompt, max_new_tokens=max_new_tokens)
+            if isinstance(result, list) and len(result) > 0:
+                return result[0].get("generated_text", "") or str(result[0])
+            elif isinstance(result, dict):
+                return result.get("generated_text", str(result))
             else:
-                return str(resp)
-        else:
-            # Text generation models
-            resp = client.text_generation(model=model_id, prompt=prompt, max_new_tokens=max_new_tokens)
-            if isinstance(resp, list) and len(resp) > 0:
-                return resp[0].get("generated_text", "") or str(resp[0])
-            elif isinstance(resp, dict):
-                return resp.get("generated_text", str(resp))
-            else:
-                return str(resp)
+                return str(result)
 
     except Exception as e:
         import traceback
-        err_msg = traceback.format_exc()
-        raise RuntimeError(f"Model call failed: {e}\n\n{err_msg}")\
+        raise RuntimeError(f"Model call failed: {e}\n\n{traceback.format_exc()}")
+
 
 # PDF extraction
 def extract_text_fitz(pdf_file):
@@ -107,12 +104,13 @@ def generate_notes(text):
     chunks = list(chunk_text_by_sentences(clean))
     notes = []
     for chunk in chunks:
-        prompt = f"Convert this into clear, structured study notes:\n\n{chunk}"
+        prompt = f"Summarize this into clean, bullet-point study notes:\n\n{chunk}"
         try:
-            gen = call_model(SUMMARY_MODEL, prompt, max_new_tokens=256)
-            notes.append(gen.strip())
+            gen = call_model(SUMMARY_MODEL, prompt, task="summarization")
+            formatted = "\n".join([f"• {line.strip()}" for line in gen.split('\n') if line.strip()])
+            notes.append(formatted)
         except Exception as e:
-            notes.append(f"[Error generating notes for this chunk: {e}]")
+            notes.append(f"[Error generating notes: {e}]")
     return "\n\n".join(n for n in notes if n)
 
 # Question generation (remote)
@@ -122,16 +120,18 @@ def generate_questions(text, q_type):
     questions = []
     for chunk in chunks:
         if q_type == "MCQs":
-            prompt = f"Generate 3 multiple choice questions with answers from:\n\n{chunk}"
+            prompt = f"Generate 3 multiple choice questions with 4 options and answers from:\n\n{chunk}"
         elif q_type == "Short Answer":
-            prompt = f"Generate 3 short-answer questions from:\n\n{chunk}"
+            prompt = f"Generate 3 short-answer questions (one line answers) from:\n\n{chunk}"
         else:
             prompt = f"Generate 3 conceptual or analytical questions from:\n\n{chunk}"
+
         try:
-            gen = call_model(QUESTION_MODEL, prompt, max_new_tokens=256)
-            questions.append(gen.strip())
+            gen = call_model(QUESTION_MODEL, prompt, task="generation")
+            formatted = "\n".join([f"• {line.strip()}" for line in gen.split('\n') if line.strip()])
+            questions.append(formatted)
         except Exception as e:
-            questions.append(f"[Error generating questions for this chunk: {e}]")
+            questions.append(f"[Error generating questions: {e}]")
     return "\n\n".join(q for q in questions if q)
 
 # 🧾 Notes Tab
