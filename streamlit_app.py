@@ -1,3 +1,4 @@
+import requests
 import os
 import streamlit as st
 import fitz  # PyMuPDF
@@ -47,35 +48,45 @@ SUMMARY_MODEL = "facebook/bart-large-cnn"
 QUESTION_MODEL = "valhalla/t5-small-qa-qg-hl"
 
 #call model shi
-def call_model(model_id, prompt, max_new_tokens=256):
-    if client is None:
+def call_model(model_id, prompt, task="generation", max_new_tokens=256):
+    """
+    Universal model caller for Hugging Face Inference API.
+    Uses direct REST calls instead of buggy InferenceClient methods.
+    """
+    if not HF_TOKEN:
         raise RuntimeError("No Hugging Face token configured. Set HF_TOKEN in Streamlit secrets or environment.")
 
+    headers = {"Authorization": f"Bearer {HF_TOKEN}"}
+    url = f"https://api-inference.huggingface.co/models/{model_id}"
+
     try:
-        # Automatically choose summarization vs generation
-        if "bart" in model_id or "t5" in model_id:
-            # Summarization models use the summarization endpoint
-            resp = client.summarization(model=model_id, text=prompt)
-            if isinstance(resp, list) and len(resp) > 0:
-                return resp[0].get("summary_text", "") or str(resp[0])
-            elif isinstance(resp, dict):
-                return resp.get("summary_text", str(resp))
-            else:
-                return str(resp)
+        payload = {
+            "inputs": prompt,
+            "parameters": {
+                "max_new_tokens": max_new_tokens,
+                "do_sample": False,
+                "temperature": 0.7
+            }
+        }
+        response = requests.post(url, headers=headers, json=payload, timeout=60)
+
+        if response.status_code != 200:
+            raise RuntimeError(f"HTTP {response.status_code}: {response.text}")
+
+        data = response.json()
+
+        # handle both summarization and text generation responses
+        if isinstance(data, list) and "summary_text" in data[0]:
+            return data[0]["summary_text"]
+        elif isinstance(data, list) and "generated_text" in data[0]:
+            return data[0]["generated_text"]
         else:
-            # Text generation models
-            resp = client.text_generation(model=model_id, prompt=prompt, max_new_tokens=max_new_tokens)
-            if isinstance(resp, list) and len(resp) > 0:
-                return resp[0].get("generated_text", "") or str(resp[0])
-            elif isinstance(resp, dict):
-                return resp.get("generated_text", str(resp))
-            else:
-                return str(resp)
+            return str(data)
 
     except Exception as e:
         import traceback
-        err_msg = traceback.format_exc()
-        raise RuntimeError(f"Model call failed: {e}\n\n{err_msg}")
+        raise RuntimeError(f"Model call failed: {e}\n\n{traceback.format_exc()}")
+
 
 # PDF extraction
 def extract_text_fitz(pdf_file):
