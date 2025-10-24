@@ -4,3 +4,4 @@ PyMuPDF
 torch
 transformers
 sentencepiece
+requests
