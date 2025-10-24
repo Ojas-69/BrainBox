@@ -107,15 +107,13 @@ def generate_notes(text):
     chunks = list(chunk_text_by_sentences(clean))
     notes = []
     for chunk in chunks:
-        prompt = f"Summarize this into clean, bullet-point study notes:\n\n{chunk}"
+        prompt = f"Convert this into clear, structured study notes:\n\n{chunk}"
         try:
-            gen = call_model(SUMMARY_MODEL, prompt, task="summarization")
-            formatted = "\n".join([f"• {line.strip()}" for line in gen.split('\n') if line.strip()])
-            notes.append(formatted)
+            gen = call_model(SUMMARY_MODEL, prompt, max_new_tokens=256)
+            notes.append(gen.strip())
         except Exception as e:
-            notes.append(f"[Error generating notes: {e}]")
+            notes.append(f"[Error generating notes for this chunk: {e}]")
     return "\n\n".join(n for n in notes if n)
-
 # Question generation (remote)
 def generate_questions(text, q_type):
     clean = clean_text(text)
@@ -123,18 +121,16 @@ def generate_questions(text, q_type):
     questions = []
     for chunk in chunks:
         if q_type == "MCQs":
-            prompt = f"Generate 3 multiple choice questions with 4 options and answers from:\n\n{chunk}"
+            prompt = f"Generate 3 multiple choice questions with answers from:\n\n{chunk}"
         elif q_type == "Short Answer":
-            prompt = f"Generate 3 short-answer questions (one line answers) from:\n\n{chunk}"
+            prompt = f"Generate 3 short-answer questions from:\n\n{chunk}"
         else:
             prompt = f"Generate 3 conceptual or analytical questions from:\n\n{chunk}"
-
         try:
-            gen = call_model(QUESTION_MODEL, prompt, task="generation")
-            formatted = "\n".join([f"• {line.strip()}" for line in gen.split('\n') if line.strip()])
-            questions.append(formatted)
+            gen = call_model(QUESTION_MODEL, prompt, max_new_tokens=256)
+            questions.append(gen.strip())
         except Exception as e:
-            questions.append(f"[Error generating questions: {e}]")
+            questions.append(f"[Error generating questions for this chunk: {e}]")
     return "\n\n".join(q for q in questions if q)
 
 # 🧾 Notes Tab
